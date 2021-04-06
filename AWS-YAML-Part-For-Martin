@@ -5,7 +5,6 @@ kontrollera flödet av exekveringen. Du kan till exempel göra "if" konditioner
 och exekvera funktioner beroende på miljö, variabler, eller error konditioner
 av tidigare exekveringar.
 '
-
 function martin_software_install () {
       yum update -y
       amazon-linux-extras install epel -y
@@ -19,16 +18,16 @@ function martin_software_install () {
       yum install -y php-gd
       cp /var/www/httpd.conf /etc/httpd/conf/httpd.conf
 }
-
-
 function martin_enable_service (){
       systemctl start httpd
       systemctl enable httpd
-      FILE=/var/www/html/wordpress/wp-config.php
+      # Variables are local in functions UNLESS exported!
+      # 'GLOBAL' var should be upper case and 'local' lower case
+      export FILE=/var/www/html/wordpress/wp-config.php
 }
-
 function martin_configure_wordpress () {
-      if [ $FILE -eq 0 ] ; then
+      # Standaard way to see if a file is there is in the folloing notation:
+      if [[ -e ${FILE} ]] ; then
         usermod -a -G apache ec2-user
         chown -R ec2-user:apache /var/www
         chmod 2775 /var/www && find /var/www -type d -exec sudo chmod 2775 {} \;
@@ -48,8 +47,6 @@ function martin_configure_wordpress () {
         systemctl restart httpd
       fi
 }
-
-
 martin_software_install &>> /var/log/bygg.log
 martin_enable_service &>> /var/log/bygg.log
 martin_configure_wordpress &>> /var/log/bygg.log
