@@ -1,0 +1,57 @@
+#!/bin/bash
+: '
+Om du följer tum regeln om funktioner så här så blir det lätt att
+kontrollera flödet av exekveringen. Du kan till exempel göra "if" konditioner
+och exekvera funktioner beroende på miljö, variabler, eller error konditioner
+av tidigare exekveringar.
+'
+
+function martin_software_install () {
+      yum update -y
+      amazon-linux-extras install epel -y
+      yum install collectd -y
+      yum install amazon-efs-utils -y
+      mkdir -p /var/www
+      echo "${ellabefs0001}:/ /var/www efs _netdev 0 0" | sudo tee -a /etc/fstab
+      mount --a
+      amazon-linux-extras install -y php7.4
+      yum install httpd -y
+      yum install -y php-gd
+      cp /var/www/httpd.conf /etc/httpd/conf/httpd.conf
+}
+
+
+function martin_enable_service (){
+      systemctl start httpd
+      systemctl enable httpd
+      FILE=/var/www/html/wordpress/wp-config.php
+}
+
+function martin_configure_wordpress () {
+      if [ $FILE -eq 0 ] ; then
+        usermod -a -G apache ec2-user
+        chown -R ec2-user:apache /var/www
+        chmod 2775 /var/www && find /var/www -type d -exec sudo chmod 2775 {} \;
+        find /var/www -type f -exec sudo chmod 0664 {} \;
+        chown -R apache /var/www
+        chgrp -R apache /var/www
+        chmod 2775 /var/www
+        find /var/www -type d -exec sudo chmod 2775 {} \;
+        find /var/www -type f -exec sudo chmod 0664 {} \
+        cd /var/www/html
+        wget https://wordpress.org/latest.tar.gz
+        tar -xzf latest.tar.gz
+        cp /var/www/html/wordpress/wp-config-sample.php /var/www/html/wordpress/wp-config.php
+        sed -i '/<Directory "/var/www/html">/,/</Directory>/ s/AllowOverride None/AllowOverride All/' /etc/httpd/conf/httpd.conf
+        sed -i 's/define('DB_USER', 'wordpress-user');/define('DB_USER', 'wpuser');/g' /var/www/html/wordpress/wp-config.php
+        sed -i 's/"define('DB_PASSWORD', 'your_strong_password');"/"define('DB_PASSWORD', 'Password01');"/g' /var/www/html/wordpress/wp-config.php
+        systemctl restart httpd
+      fi
+}
+
+
+martin_software_install &>> /var/log/bygg.log
+martin_enable_service &>> /var/log/bygg.log
+martin_configure_wordpress &>> /var/log/bygg.log
+
+
